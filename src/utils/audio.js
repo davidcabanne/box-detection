@@ -1,3 +1,5 @@
+import { waveform } from "../constants";
+
 export const initializeAudioContext = (audioCtxRef) => {
   if (!audioCtxRef.current) {
     audioCtxRef.current = new (window.AudioContext ||
@@ -66,7 +68,7 @@ export const playNote = (audioCtxRef, frequency, panValue, gainValue) => {
   gainNode.gain.setValueAtTime(gainValue, audioCtx.currentTime);
 
   // Waveform type
-  oscillator.type = "triangle";
+  oscillator.type = waveform;
   oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
 
   // Connect nodes: oscillator -> gain -> panner -> destination
