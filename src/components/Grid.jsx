@@ -14,6 +14,7 @@ const GridContainer = styled.div`
   & div {
     background: ${(props) => props.$initialColor};
     border: 1px solid rgba(0, 0, 0, 0.1);
+    mix-blend-mode: multiply;
   }
 `;
 

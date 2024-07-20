@@ -1,5 +1,3 @@
-import { waveform } from "../constants";
-
 export const initializeAudioContext = (audioCtxRef) => {
   if (!audioCtxRef.current) {
     audioCtxRef.current = new (window.AudioContext ||
@@ -30,10 +28,32 @@ export const generateFrequencies = (numCols, numRows) => {
 
 export const calculatePanValue = (col, numCols) => {
   // Maps col from [0, numCols-1] to [-1, 1]
-  return (col / (numCols - 1)) * 2 - 1;
+  const panValue = (col / (numCols - 1)) * 2 - 1;
+  return panValue;
 };
 
-export const playNote = (audioCtxRef, frequency, panValue) => {
+export const calculateRowValue = (row, numRows) => {
+  // Maps row from [0, numRows-1] to [-1, 1]
+  const rowValue = (row / (numRows - 1)) * 2 - 1;
+  return rowValue;
+};
+
+export const calculateGainValue = (panValue, rowValue) => {
+  const minGain = 0.05; // Minimum gain on the sides
+  const maxGain = 0.5; // Gain in the center
+
+  // Calculate gain based on pan and row values
+  const horizontalGain =
+    minGain + (maxGain - minGain) * (1 - Math.abs(panValue));
+  const verticalGain = minGain + (maxGain - minGain) * (1 - Math.abs(rowValue));
+
+  // Combine the horizontal and vertical gains
+  const gainValue = horizontalGain * verticalGain;
+
+  return gainValue;
+};
+
+export const playNote = (audioCtxRef, frequency, panValue, gainValue) => {
   const audioCtx = audioCtxRef.current;
   const oscillator = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
@@ -42,12 +62,12 @@ export const playNote = (audioCtxRef, frequency, panValue) => {
   // Set the pan value
   panner.pan.setValueAtTime(panValue, audioCtx.currentTime);
 
-  // Waveform type
-  oscillator.type = waveform;
-  oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+  // Set the gain value based on combined pan and row values
+  gainNode.gain.setValueAtTime(gainValue, audioCtx.currentTime);
 
-  // Set initial gain to a lower value to avoid clipping distortion
-  gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+  // Waveform type
+  oscillator.type = "triangle";
+  oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
 
   // Connect nodes: oscillator -> gain -> panner -> destination
   oscillator.connect(gainNode);

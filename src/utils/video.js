@@ -1,4 +1,9 @@
-import { calculatePanValue } from "./audio";
+import {
+  calculatePanValue,
+  calculateRowValue,
+  calculateGainValue,
+} from "./audio";
+
 export const detectMovement = (
   videoRef,
   canvasRef,
@@ -53,11 +58,17 @@ export const detectMovement = (
       if (!prevOccupancy[index]) {
         gridRef.current[index].style.background = `${activeColor}`;
         const col = index % Math.sqrt(prevOccupancy.length);
+        const row = Math.floor(index / Math.sqrt(prevOccupancy.length));
         const panValue = calculatePanValue(
           col,
           Math.sqrt(prevOccupancy.length)
         );
-        playNote(audioCtxRef, frequencies[index], panValue);
+        const rowValue = calculateRowValue(
+          row,
+          Math.sqrt(prevOccupancy.length)
+        );
+        const gainValue = calculateGainValue(panValue, rowValue);
+        playNote(audioCtxRef, frequencies[index], panValue, gainValue);
       }
     } else {
       if (prevOccupancy[index]) {
