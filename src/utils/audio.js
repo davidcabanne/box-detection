@@ -55,11 +55,33 @@ export const calculateGainValue = (panValue, rowValue) => {
   return gainValue;
 };
 
+const createImpulseResponse = (audioCtx, duration = 2, decay = 2) => {
+  const sampleRate = audioCtx.sampleRate;
+  const length = sampleRate * duration;
+  const impulse = audioCtx.createBuffer(2, length, sampleRate);
+  const impulseL = impulse.getChannelData(0);
+  const impulseR = impulse.getChannelData(1);
+
+  for (let i = 0; i < length; i++) {
+    const n = length - i;
+    impulseL[i] = (Math.random() * 2 - 1) * Math.pow(n / length, decay);
+    impulseR[i] = (Math.random() * 2 - 1) * Math.pow(n / length, decay);
+  }
+
+  return impulse;
+};
+
 export const playNote = (audioCtxRef, frequency, panValue, gainValue) => {
   const audioCtx = audioCtxRef.current;
   const oscillator = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
   const panner = audioCtx.createStereoPanner();
+  const convolver = audioCtx.createConvolver();
+  const dryGainNode = audioCtx.createGain();
+  const wetGainNode = audioCtx.createGain();
+
+  // Set the impulse response for the convolver node (reverb effect)
+  convolver.buffer = createImpulseResponse(audioCtx);
 
   // Set the pan value
   panner.pan.setValueAtTime(panValue, audioCtx.currentTime);
@@ -67,14 +89,26 @@ export const playNote = (audioCtxRef, frequency, panValue, gainValue) => {
   // Set the gain value based on combined pan and row values
   gainNode.gain.setValueAtTime(gainValue, audioCtx.currentTime);
 
+  // Set the wet/dry mix
+  dryGainNode.gain.setValueAtTime(0.7, audioCtx.currentTime); // 70% dry signal
+  wetGainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); // 30% wet signal
+
   // Waveform type
   oscillator.type = waveform;
   oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
 
-  // Connect nodes: oscillator -> gain -> panner -> destination
+  // Connect nodes: oscillator -> gain -> panner
   oscillator.connect(gainNode);
   gainNode.connect(panner);
-  panner.connect(audioCtx.destination);
+
+  // Connect dry path: panner -> dryGainNode -> destination
+  panner.connect(dryGainNode);
+  dryGainNode.connect(audioCtx.destination);
+
+  // Connect wet path: panner -> convolver -> wetGainNode -> destination
+  panner.connect(convolver);
+  convolver.connect(wetGainNode);
+  wetGainNode.connect(audioCtx.destination);
 
   oscillator.start();
   gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1);
